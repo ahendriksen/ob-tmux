@@ -1,12 +1,13 @@
 ;;; ob-tmux.el --- Babel Support for Interactive Terminal -*- lexical-binding: t; -*-
 
 ;; Copyright (C) 2009-2017 Free Software Foundation, Inc.
+;; Copyright (C) 2017 Allard Hendriksen
 
-;; Author: Benjamin Andresen, Allard Hendriksen
+;; Author: Benjamin Andresen
 ;; Keywords: literate programming, interactive shell
 ;; Homepage: http://orgmode.org
 
-;; This file is part of GNU Emacs.
+;; This file is NOT part of GNU Emacs.
 
 ;; GNU Emacs is free software: you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
