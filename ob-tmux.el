@@ -119,27 +119,30 @@ In case you want to use a different tmux than one selected by your $PATH")
 			  sockets)))))
     (when match-socket (car (split-string match-socket ":")))))
 
-;; (defun org-babel-screen-test ()
-;;   "Test if the default setup works.
-;; The terminal should shortly flicker."
-;;   (interactive)
-;;   (let* ((random-string (format "%s" (random 99999)))
-;;          (tmpfile (org-babel-temp-file "ob-screen-test-"))
-;;          (body (concat "echo '" random-string "' > " tmpfile "\nexit\n"))
-;;          tmp-string)
-;;     (org-babel-execute:screen body org-babel-default-header-args:screen)
-;;     ;; XXX: need to find a better way to do the following
-;;     (while (not (file-readable-p tmpfile))
-;;       ;; do something, otherwise this will be optimized away
-;;       (format "org-babel-screen: File not readable yet."))
-;;     (setq tmp-string (with-temp-buffer
-;;                        (insert-file-contents-literally tmpfile)
-;;                        (buffer-substring (point-min) (point-max))))
-;;     (delete-file tmpfile)
-;;     (message (concat "org-babel-screen: Setup "
-;;                      (if (string-match random-string tmp-string)
-;;                          "WORKS."
-;; 		       "DOESN'T work.")))))
+(defun org-babel-tmux-open-file (path)
+  (with-temp-buffer
+    (insert-file-contents-literally path)
+    (buffer-substring (point-min) (point-max))))
+
+(defun org-babel-tmux-test ()
+  "Test if the default setup works. The terminal should shortly flicker."
+  (interactive)
+  (let* ((random-string (format "%s" (random 99999)))
+         (tmpfile (org-babel-temp-file "ob-screen-test-"))
+         (body (concat "echo '" random-string "' > " tmpfile " ; exit"))
+         tmp-string)
+    (org-babel-execute:tmux body org-babel-default-header-args:tmux)
+    ;; XXX: need to find a better way to do the following
+    (while (or (not (file-readable-p tmpfile))
+	       (= 0 (length (org-babel-tmux-open-file tmpfile))))
+      ;; do something, otherwise this will be optimized away
+      (format "org-babel-screen: File not readable yet."))
+    (setq tmp-string (org-babel-tmux-open-file tmpfile))
+    (delete-file tmpfile)
+    (message (concat "org-babel-screen: Setup "
+                     (if (string-match random-string tmp-string)
+                         "WORKS."
+		       "DOESN'T work.")))))
 
 (provide 'ob-tmux)
 
