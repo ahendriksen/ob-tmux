@@ -40,6 +40,9 @@
   "The command location for tmux.
 In case you want to use a different tmux than one selected by your $PATH")
 
+(defvar org-babel-tmux-session-prefix "org-babel-session-"
+  "The string that will be prefixed to tmux sessions started by ob-tmux")
+
 (defvar org-babel-default-header-args:tmux
   '((:results . "silent") (:session . "default") (:cmd . "bash") (:terminal . "gnome-terminal"))
   "Default arguments to use when running tmux source blocks.")
@@ -66,7 +69,7 @@ In case you want to use a different tmux than one selected by your $PATH")
 	   `("--"
 	     ,org-babel-tmux-location
 	     "new-session" "-A" "-s"
-	     ,(concat "org-babel-session-" session)))
+	     ,(concat org-babel-tmux-session-prefix session)))
     ;; XXX: Is there a better way than the following?
     (while (not (org-babel-tmux-session-socketname session))
       ;; wait until tmux session is available before returning
@@ -74,14 +77,26 @@ In case you want to use a different tmux than one selected by your $PATH")
 
 ;; helper functions
 
+(defun org-babel-tmux-send-keys (session line)
+  "If SESSION exists, send a line of text to it."
+  (let ((socket (org-babel-tmux-session-socketname session)))
+    (when socket
+      (start-process "tmux-send-keys"
+	       "*Messages*"
+	       "tmux"
+	       "send-keys"
+	       "-t"
+	       (concat org-babel-tmux-session-prefix session ":1")
+	       line
+	       "Enter"))))
+
 (defun org-babel-tmux-session-execute-string (session body)
   "If SESSION exists, send BODY to it."
   (let ((socket (org-babel-tmux-session-socketname session)))
     (when socket
-      (let ((tmpfile (org-babel-tmux-session-write-temp-file session body)))
-	(shell-command
-	 (concat "cat " tmpfile
-		 " | xargs -I{} tmux send-keys -t org-babel-session-" session ":1  '{}' Enter"))))))
+      (let ((lines (split-string body "[\n\r]+")))
+	(mapc (lambda (l) (org-babel-tmux-send-keys session l))
+	      lines)))))
 
 (defun org-babel-tmux-session-socketname (session)
   "Check if SESSION exists by parsing output of \"tmux ls\"."
@@ -99,21 +114,10 @@ In case you want to use a different tmux than one selected by your $PATH")
 			 (mapcar
 			  (lambda (x)
 			    (when (string-match
-				   (concat "org-babel-session-" session) x)
+				   (concat org-babel-tmux-session-prefix session) x)
 			      x))
 			  sockets)))))
     (when match-socket (car (split-string match-socket ":")))))
-
-(defun org-babel-tmux-session-write-temp-file (_session body)
-  "Save BODY in a temp file that is named after SESSION."
-  (let ((tmpfile (org-babel-temp-file "ob-tmux-")))
-    (with-temp-file tmpfile
-      (insert body)
-
-      ;; org-babel has superfluous spaces
-      (goto-char (point-min))
-      (delete-matching-lines "^ +$"))
-    tmpfile))
 
 ;; (defun org-babel-screen-test ()
 ;;   "Test if the default setup works.
