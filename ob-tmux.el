@@ -35,6 +35,7 @@
 
 ;;; Code:
 (require 'ob)
+(require 'seq)
 
 (defvar org-babel-tmux-location "tmux"
   "The command location for tmux.
@@ -53,8 +54,10 @@ In case you want to use a different tmux than one selected by your $PATH")
   (message "Sending source code block to interactive terminal session...")
   (save-window-excursion
     (let* ((session (cdr (assq :session params)))
-           (socket (org-babel-tmux-session-socketname session)))
-      (unless socket (org-babel-prep-session:tmux session params))
+           (session-alive (org-babel-tmux-session-alive-p session))
+	   (window-alive (org-babel-tmux-window-alive-p session)))
+      (unless session-alive (org-babel-prep-session:tmux session params))
+      (unless window-alive (org-babel-tmux-create-window session))
       (org-babel-tmux-session-execute-string
        session (org-babel-expand-body:generic body params)))))
 
@@ -67,57 +70,85 @@ In case you want to use a different tmux than one selected by your $PATH")
     (apply 'start-process process-name "*Messages*"
 	   terminal
 	   `("--"
-	     ,org-babel-tmux-location
-	     "new-session" "-A" "-s"
-	     ,(concat org-babel-tmux-session-prefix session)))
+	     ,org-babel-tmux-location "new-session" "-A"
+	     "-s" ,(org-babel-tmux-session session)
+	     "-n" ,(org-babel-tmux-window-default session)))
     ;; XXX: Is there a better way than the following?
-    (while (not (org-babel-tmux-session-socketname session))
+    (while (not (org-babel-tmux-session-alive-p session))
       ;; wait until tmux session is available before returning
       )))
 
 ;; helper functions
 
+(defun org-babel-tmux-create-window (session)
+  "Creates a tmux window in session if it does not yet exist."
+    (unless (org-babel-tmux-window-alive-p session)
+      (start-process "tmux-create-window" "*Messages*"
+		     "tmux" "new-window"
+		     "-c" (expand-file-name "~/")
+		     "-n" (org-babel-tmux-window-default session)
+		     "-t" (org-babel-tmux-session session))))
+
 (defun org-babel-tmux-send-keys (session line)
   "If SESSION exists, send a line of text to it."
-  (let ((socket (org-babel-tmux-session-socketname session)))
-    (when socket
+  (let ((alive (org-babel-tmux-session-alive-p session)))
+    (when alive
       (start-process "tmux-send-keys"
 	       "*Messages*"
 	       "tmux"
 	       "send-keys"
 	       "-t"
-	       (concat org-babel-tmux-session-prefix session ":1")
+	       (concat (org-babel-tmux-session session)
+		       ":"
+		       (org-babel-tmux-window-default session))
 	       line
 	       "Enter"))))
 
 (defun org-babel-tmux-session-execute-string (session body)
   "If SESSION exists, send BODY to it."
-  (let ((socket (org-babel-tmux-session-socketname session)))
-    (when socket
+  (let ((alive (org-babel-tmux-session-alive-p session)))
+    (when alive
       (let ((lines (split-string body "[\n\r]+")))
 	(mapc (lambda (l) (org-babel-tmux-send-keys session l))
 	      lines)))))
 
-(defun org-babel-tmux-session-socketname (session)
+(defun org-babel-tmux-session (org-session)
+  "Extracts the tmux session from the org session string."
+  (concat org-babel-tmux-session-prefix
+	  (car (split-string org-session ":"))))
+
+(defun org-babel-tmux-window (org-session)
+  "Extracts the tmux window from the org session string.
+Can return nil if no windows specified"
+  (cadr (split-string org-session ":")))
+
+(defun org-babel-tmux-window-default (org-session)
+  "Extracts the tmux window from the org session string.
+Can return nil if no windows specified"
+  (let* ((tmux-window (cadr (split-string org-session ":"))))
+    (if tmux-window tmux-window "1")))
+
+
+(defun org-babel-tmux-session-alive-p (session)
   "Check if SESSION exists by parsing output of \"tmux ls\"."
-  (let* ((tmux-ls (shell-command-to-string "tmux ls"))
-	 (sockets (delq
-		   nil
-		   (mapcar
-		    (lambda (x)
-		      (when (string-match (rx "windows") x)
-			x))
-		    (split-string tmux-ls "\n"))))
-	 (match-socket (car
-			(delq
-			 nil
-			 (mapcar
-			  (lambda (x)
-			    (when (string-match
-				   (concat org-babel-tmux-session-prefix session) x)
-			      x))
-			  sockets)))))
-    (when match-socket (car (split-string match-socket ":")))))
+  (let* ((tmux-ls (shell-command-to-string "tmux ls -F '#S'"))
+	 (tmux-session (org-babel-tmux-session session)))
+    (car
+     (seq-filter (lambda (x) (string-equal tmux-session x))
+		 (split-string tmux-ls "\n")))))
+
+(defun org-babel-tmux-window-alive-p (session)
+  "Check if WINDOW exists in tmux session."
+  (let* ((tmux-session (org-babel-tmux-session session))
+	 (tmux-window (org-babel-tmux-window session))
+	 (tmux-lws (shell-command-to-string
+		   (concat "tmux list-windows -F '#W' -t '"
+			   tmux-session "'"))))
+    (if tmux-window
+	(car
+	 (seq-filter (lambda(x) (string-equal tmux-window x))
+		     (split-string tmux-lws "\n")))
+      't)))
 
 (defun org-babel-tmux-open-file (path)
   (with-temp-buffer
