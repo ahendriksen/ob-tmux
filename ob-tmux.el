@@ -27,10 +27,11 @@
 ;; Org-Babel support for interactive terminals.  Mostly shell scripts.
 ;; Heavily inspired by 'eev' from Eduardo Ochs
 ;;
-;; Adding :cmd and :terminal as header arguments
+;; Adding :terminal as header arguments
 ;; :terminal must support the -T (title) and -e (command) parameter
+;;           or allow for the command to be added after '--'
 ;;
-;; You can test the default setup. (xterm + sh) with
+;; You can test the default setup. (gnome-terminal) with
 ;; M-x org-babel-tmux-test RET
 
 ;;; Code:
@@ -45,7 +46,9 @@ In case you want to use a different tmux than one selected by your $PATH")
   "The string that will be prefixed to tmux sessions started by ob-tmux")
 
 (defvar org-babel-default-header-args:tmux
-  '((:results . "silent") (:session . "default") (:cmd . "bash") (:terminal . "gnome-terminal"))
+  '((:results . "silent")
+    (:session . "default")
+    (:terminal . "gnome-terminal"))
   "Default arguments to use when running tmux source blocks.")
 
 (defun org-babel-execute:tmux (body params)
@@ -68,7 +71,6 @@ PARAMS. Starts a terminal window if the tmux session does not yet
 exist. No terminal window is started, if the only tmux window
 must be created."
   (let* ((session (cdr (assq :session params)))
-         (cmd (cdr (assq :cmd params)))
          (terminal (cdr (assq :terminal params)))
 	 (session-alive (org-babel-tmux-session-alive-p session))
 	 (window-alive (org-babel-tmux-window-alive-p session)))
