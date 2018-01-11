@@ -71,8 +71,8 @@ must be created."
          (cmd (cdr (assq :cmd params)))
          (terminal (cdr (assq :terminal params)))
 	 (session-alive (org-babel-tmux-session-alive-p session))
-	 (window-alive (org-babel-tmux-window-alive-p session))
-         (process-name (concat "org-babel: terminal (" session ")")))
+	 (window-alive (org-babel-tmux-window-alive-p session)))
+
     ;; First create tmux session and windows
     (unless session-alive (org-babel-tmux-create-session session))
     (unless window-alive (org-babel-tmux-create-window session))
@@ -86,6 +86,20 @@ must be created."
     (while (not (org-babel-tmux-session-alive-p session)))))
 
 ;; helper functions
+
+(defun org-babel-tmux-start-terminal-window (session terminal)
+  "Starts a terminal window with tmux attached to session."
+  (let* ((process-name (concat "org-babel: terminal (" session ")")))
+    (if (string-equal terminal "xterm")
+	(start-process process-name "*Messages*"
+		       terminal
+		       "-T" (org-babel-tmux-target-session session)
+		       "-e" org-babel-tmux-location "attach-session"
+		       "-t" (org-babel-tmux-target-session session))
+      (start-process process-name "*Messages*"
+		     terminal "--"
+		     org-babel-tmux-location "attach-session"
+		     "-t" (org-babel-tmux-target-session session)))))
 
 (defun org-babel-tmux-create-session (session)
   "Creates a tmux session if it does not yet exist."
