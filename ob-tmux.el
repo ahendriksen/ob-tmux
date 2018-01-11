@@ -56,51 +56,63 @@ In case you want to use a different tmux than one selected by your $PATH")
     (let* ((session (cdr (assq :session params)))
            (session-alive (org-babel-tmux-session-alive-p session))
 	   (window-alive (org-babel-tmux-window-alive-p session)))
-      (unless session-alive (org-babel-prep-session:tmux session params))
-      (unless window-alive (org-babel-tmux-create-window session))
+      ;; Prepare session unless both the tmux session and window exist.
+      (unless (and session-alive window-alive)
+	(org-babel-prep-session:tmux session params))
       (org-babel-tmux-session-execute-string
        session (org-babel-expand-body:generic body params)))))
 
 (defun org-babel-prep-session:tmux (_session params)
-  "Prepare SESSION according to the header arguments specified in PARAMS."
+  "Prepare SESSION according to the header arguments specified in
+PARAMS. Starts a terminal window if the tmux session does not yet
+exist. No terminal window is started, if the only tmux window
+must be created."
   (let* ((session (cdr (assq :session params)))
          (cmd (cdr (assq :cmd params)))
          (terminal (cdr (assq :terminal params)))
+	 (session-alive (org-babel-tmux-session-alive-p session))
+	 (window-alive (org-babel-tmux-window-alive-p session))
          (process-name (concat "org-babel: terminal (" session ")")))
-    (apply 'start-process process-name "*Messages*"
-	   terminal
-	   `("--"
-	     ,org-babel-tmux-location "new-session" "-A"
-	     "-s" ,(org-babel-tmux-session session)
-	     "-n" ,(org-babel-tmux-window-default session)))
+    ;; First create tmux session and windows
+    (unless session-alive (org-babel-tmux-create-session session))
+    (unless window-alive (org-babel-tmux-create-window session))
+    (unless session-alive
+      (start-process process-name "*Messages*"
+		     terminal "--"
+		     org-babel-tmux-location "attach-session"
+		     "-t" (org-babel-tmux-target-session session)))
     ;; XXX: Is there a better way than the following?
-    (while (not (org-babel-tmux-session-alive-p session))
-      ;; wait until tmux session is available before returning
-      )))
+    ;; wait until tmux session is available before returning
+    (while (not (org-babel-tmux-session-alive-p session)))))
 
 ;; helper functions
 
+(defun org-babel-tmux-create-session (session)
+  "Creates a tmux session if it does not yet exist."
+  (unless (org-babel-tmux-session-alive-p session)
+    (start-process "tmux-create-session" "*Messages*"
+		   org-babel-tmux-location "new-session"
+		   "-d" ;; just create the session, don't attach.
+		   "-c" (expand-file-name "~/") ;; start in home directory
+		   "-s" (org-babel-tmux-session session)
+		   "-n" (org-babel-tmux-window-default session))))
+
 (defun org-babel-tmux-create-window (session)
   "Creates a tmux window in session if it does not yet exist."
-    (unless (org-babel-tmux-window-alive-p session)
-      (start-process "tmux-create-window" "*Messages*"
-		     "tmux" "new-window"
-		     "-c" (expand-file-name "~/")
-		     "-n" (org-babel-tmux-window-default session)
-		     "-t" (org-babel-tmux-session session))))
+  (unless (org-babel-tmux-window-alive-p session)
+    (start-process "tmux-create-window" "*Messages*"
+		   org-babel-tmux-location "new-window"
+		   "-c" (expand-file-name "~/") ;; start in home directory
+		   "-n" (org-babel-tmux-window-default session)
+		   "-t" (org-babel-tmux-session session))))
 
 (defun org-babel-tmux-send-keys (session line)
   "If SESSION exists, send a line of text to it."
   (let ((alive (org-babel-tmux-session-alive-p session)))
     (when alive
-      (start-process "tmux-send-keys"
-	       "*Messages*"
-	       "tmux"
-	       "send-keys"
-	       "-t"
-	       (concat (org-babel-tmux-session session)
-		       ":"
-		       (org-babel-tmux-window-default session))
+      (start-process "tmux-send-keys" "*Messages*"
+	       "tmux" "send-keys"
+	       "-t" (org-babel-tmux-target-session session)
 	       line
 	       "Enter"))))
 
@@ -119,15 +131,20 @@ In case you want to use a different tmux than one selected by your $PATH")
 
 (defun org-babel-tmux-window (org-session)
   "Extracts the tmux window from the org session string.
-Can return nil if no windows specified"
+Can return nil if no window specified."
   (cadr (split-string org-session ":")))
 
 (defun org-babel-tmux-window-default (org-session)
   "Extracts the tmux window from the org session string.
-Can return nil if no windows specified"
+Returns '1' if no window specified."
   (let* ((tmux-window (cadr (split-string org-session ":"))))
     (if tmux-window tmux-window "1")))
 
+(defun org-babel-tmux-target-session (org-session)
+  "Constructs a target-session from the org session string."
+  (concat (org-babel-tmux-session org-session)
+	  ":"
+	  (org-babel-tmux-window-default org-session)))
 
 (defun org-babel-tmux-session-alive-p (session)
   "Check if SESSION exists by parsing output of \"tmux ls\"."
