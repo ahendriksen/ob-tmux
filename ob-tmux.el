@@ -51,6 +51,8 @@ In case you want to use a different tmux than one selected by your $PATH")
     (:terminal . "gnome-terminal"))
   "Default arguments to use when running tmux source blocks.")
 
+(add-to-list 'org-src-lang-modes '("tmux" . sh))
+
 (defun org-babel-execute:tmux (body params)
   "Send a block of code via tmux to a terminal using Babel.
 \"default\" session is used when none is specified."
