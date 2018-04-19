@@ -74,6 +74,7 @@ exist. No terminal window is started, if the only tmux window
 must be created."
   (let* ((session (cdr (assq :session params)))
          (terminal (cdr (assq :terminal params)))
+	 (process-name (concat "org-babel: terminal (" session ")"))
 	 (session-alive (org-babel-tmux-session-alive-p session))
 	 (window-alive (org-babel-tmux-window-alive-p session)))
 
