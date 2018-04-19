@@ -129,11 +129,17 @@ must be created."
   "If SESSION exists, send a line of text to it."
   (let ((alive (org-babel-tmux-session-alive-p session)))
     (when alive
-      (start-process "tmux-send-keys" "*Messages*"
-	       "tmux" "send-keys"
-	       "-t" (org-babel-tmux-target-session session)
+      (start-process "tmux-send-keys"
+	       "*Messages*"
+	       "tmux"
+	       "send-keys"
+	       "-l"
+	       "-t"
+	       (concat (org-babel-tmux-session session)
+		       ":"
+		       (org-babel-tmux-window-default session))
 	       line
-	       "Enter"))))
+	       "\n"))))
 
 (defun org-babel-tmux-session-execute-string (session body)
   "If SESSION exists, send BODY to it."
