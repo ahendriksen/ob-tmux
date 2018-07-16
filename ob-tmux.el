@@ -114,7 +114,7 @@ must be created."
     (start-process "tmux-create-session" "*Messages*"
 		   org-babel-tmux-location "new-session"
 		   "-d" ;; just create the session, don't attach.
-		   "-c" (expand-file-name "~/") ;; start in home directory
+		   "-c" (expand-file-name "~") ;; start in home directory
 		   "-s" (org-babel-tmux-session session)
 		   "-n" (org-babel-tmux-window-default session))))
 
