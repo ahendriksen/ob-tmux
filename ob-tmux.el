@@ -64,6 +64,8 @@ In case you want to use a different tmux than one selected by your $PATH")
       ;; Prepare session unless both the tmux session and window exist.
       (unless (and session-alive window-alive)
 	(org-babel-prep-session:tmux session params))
+      ;; Disable window renaming from within tmux
+      (org-babel-tmux-disable-renaming session)
       (org-babel-tmux-session-execute-string
        session (org-babel-expand-body:generic body params)))))
 
@@ -121,9 +123,33 @@ must be created."
   (unless (org-babel-tmux-window-alive-p session)
     (start-process "tmux-create-window" "*Messages*"
 		   org-babel-tmux-location "new-window"
-		   "-c" (expand-file-name "~/") ;; start in home directory
+		   "-c" (expand-file-name "~") ;; start in home directory
 		   "-n" (org-babel-tmux-window-default session)
 		   "-t" (org-babel-tmux-session session))))
+
+(defun org-babel-tmux-set-window-option (session option value)
+  "If SESSION exists, set option for window."
+  (let ((alive (org-babel-tmux-session-alive-p session)))
+    (when alive
+      (start-process "tmux-window-options"
+	       "*Messages*"
+	       "tmux"
+	       "set-window-option"
+	       "-t"
+	       (concat (org-babel-tmux-session session)
+		       ":"
+		       (org-babel-tmux-window-default session))
+	       option
+	       value))))
+
+(defun org-babel-tmux-disable-renaming (session)
+  "Disable renaming features for tmux window.
+
+Disabling renaming improves the chances that ob-tmux will be able
+to find the window again later."
+  (progn
+    (org-babel-tmux-set-window-option session "allow-rename" "off")
+    (org-babel-tmux-set-window-option session "automatic-rename" "off")))
 
 (defun org-babel-tmux-send-keys (session line)
   "If SESSION exists, send a line of text to it."
