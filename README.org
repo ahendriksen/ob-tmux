@@ -17,15 +17,13 @@ In your ~.emacs~ or ~.emacs.d/init.el~ file, add the following:
   (setq org-babel-default-header-args:tmux
     '((:results . "silent")		;
       (:session . "default")	; The default tmux session to send code to
+      (:socket  . nil)              ; The default tmux socket to communicate with
       ;; You can use xterm or gnome terminal
       (:terminal . "gnome-terminal")))
 
   ;; The tmux sessions are prefixed with the following string.
   ;; You can customize this if you like.
-  (setq org-babel-tmux-session-prefix "org-babel-session-")
-
-  ;; Syntax highlighting can be added with the following line:
-  (add-to-list 'org-src-lang-modes (cons "tmux" 'sh))
+  (setq org-babel-tmux-session-prefix "ob-")
 
   ;; Finally, if your tmux is not in your $PATH for whatever reason, you
   ;; may set the path to the tmux binary as follows:
@@ -86,6 +84,52 @@ after a reboot. Take a Look at the following snippet.
 If your point is on the =Startup tmux= header, you can execute all
 code blocks in the subtree with ~C-c C-v s~ to restart your favorite
 tmux sessions.
+** Sockets: remoting
+If you want your code to execute on a remote machine, you can use
+=ob-tmux= too. There are two ways to control a remote machine. The
+first is to simply SSH into the remote machine and execute code from
+there:
+
+: #+BEGIN_SRC tmux
+: ssh remote-machine
+: #+END_SRC
+: #+BEGIN_SRC tmux
+: echo do things...
+: #+END_SRC
+
+This method has one big downside: long-running code might be
+interrupted when you lose connection. This method does not start a
+tmux session on the remote computer; it only starts a tmux session on
+the local computer.
+
+The other method is to start a remote tmux session and share the
+remote tmux socket with your local machine.
+It is possible to start a remote tmux session:
+#+BEGIN_SRC sh
+ssh remote-machine -t tmux new -d
+#+END_SRC
+This creates a socket on the remote machine. You can forward this
+socket to the local machine as follows:
+#+BEGIN_SRC sh
+  REMOTE_SOCKET=$(ssh remote-machine  'tmux ls -F "#{socket_path}"' | head -1)
+  echo $REMOTE_SOCKET
+  ssh remote-machine -tfN \
+      -L ~/.tmux-local-socket-remote-machine:$REMOTE_SOCKET
+#+END_SRC
+
+Now you can execute code on the remote machine:
+: #+BEGIN_SRC tmux :socket ~/.tmux-local-socket-remote-machine :session hello
+: echo hello from remote machine
+: #+END_SRC
+
+There are some advantages to this method, especially with long running
+jobs. For instance, if your local machine is rebooted the remote tmux
+session remains running and you can always reconnect. Furthermore, you
+do not have to prepend =ssh remote-machine= to every tmux source code
+block. This saves time and makes sure that you code is reexecutable:
+you can execute the same code block twice and it will (hopefully) work
+the same. It will not try to SSH into the remote machine again while
+it is already logged in remotely.
 
 * Known bugs and or possible issues
 My tmux indexes start at 1. By default, tmux window indexes start at
