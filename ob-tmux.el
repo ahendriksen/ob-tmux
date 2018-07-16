@@ -136,9 +136,7 @@ must be created."
 	       "tmux"
 	       "set-window-option"
 	       "-t"
-	       (concat (org-babel-tmux-session session)
-		       ":"
-		       (org-babel-tmux-window-default session))
+	       (org-babel-tmux-target-session session)
 	       option
 	       value))))
 
@@ -161,9 +159,7 @@ to find the window again later."
 	       "send-keys"
 	       "-l"
 	       "-t"
-	       (concat (org-babel-tmux-session session)
-		       ":"
-		       (org-babel-tmux-window-default session))
+	       (org-babel-tmux-target-session session)
 	       line
 	       "\n"))))
 
@@ -177,13 +173,17 @@ to find the window again later."
 
 (defun org-babel-tmux-session (org-session)
   "Extracts the tmux session from the org session string."
-  (concat org-babel-tmux-session-prefix
-	  (car (split-string org-session ":"))))
+  (let* ((session (car (split-string org-session ":"))))
+    (concat org-babel-tmux-session-prefix
+	    (if (string-empty-p session) "default" session))))
+
 
 (defun org-babel-tmux-window (org-session)
   "Extracts the tmux window from the org session string.
 Can return nil if no window specified."
-  (cadr (split-string org-session ":")))
+  (let* ((window (cadr (split-string org-session ":"))))
+    (if (string-empty-p window) nil window)))
+
 
 (defun org-babel-tmux-window-default (org-session)
   "Extracts the tmux window from the org session string.
@@ -192,10 +192,13 @@ Returns '1' if no window specified."
     (if tmux-window tmux-window "1")))
 
 (defun org-babel-tmux-target-session (org-session)
-  "Constructs a target-session from the org session string."
-  (concat (org-babel-tmux-session org-session)
-	  ":"
-	  (org-babel-tmux-window-default org-session)))
+  "Constructs a tmux target from the org session string.
+
+If no window is specified, use first window."
+  (let* ((target-session (org-babel-tmux-session org-session))
+	 (window (org-babel-tmux-window org-session))
+	 (target-window (if window (concat "=" window) "^")))
+    (concat target-session ":" target-window)))
 
 (defun org-babel-tmux-session-alive-p (session)
   "Check if SESSION exists by parsing output of \"tmux ls\"."
@@ -205,17 +208,18 @@ Returns '1' if no window specified."
      (seq-filter (lambda (x) (string-equal tmux-session x))
 		 (split-string tmux-ls "\n")))))
 
-(defun org-babel-tmux-window-alive-p (session)
-  "Check if WINDOW exists in tmux session."
-  (let* ((tmux-session (org-babel-tmux-session session))
-	 (tmux-window (org-babel-tmux-window session))
+(defun org-babel-tmux-window-alive-p (org-session)
+  "Check if WINDOW exists in tmux session.
+
+If no window is specified in org-session, returns 't."
+  (let* ((tmux-window (org-babel-tmux-window org-session))
+	 (tmux-target (org-babel-tmux-target-session org-session))
 	 (tmux-lws (shell-command-to-string
-		   (concat "tmux list-windows -F '#W' -t '"
-			   tmux-session "'"))))
+		   (concat "tmux list-panes -F 'yes_exists' -t '"
+			   tmux-target "'"))))
     (if tmux-window
-	(car
-	 (seq-filter (lambda(x) (string-equal tmux-window x))
-		     (split-string tmux-lws "\n")))
+	(progn
+	  (string-equal "yes_exists\n" tmux-lws))
       't)))
 
 (defun org-babel-tmux-open-file (path)
