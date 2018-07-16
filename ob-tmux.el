@@ -52,6 +52,7 @@ explicitly named in an org session.")
 (defvar org-babel-default-header-args:tmux
   '((:results . "silent")
     (:session . "default")
+    (:socket . nil)
     (:terminal . "gnome-terminal"))
   "Default arguments to use when running tmux source blocks.")
 
@@ -70,6 +71,7 @@ explicitly named in an org session.")
     (let* ((org-session (cdr (assq :session params)))
 	   (terminal (cdr (assq :terminal params)))
 	   (socket (cdr (assq :socket params)))
+	   (socket (when socket (expand-file-name socket)))
 	   (ob-session (ob-tmux--from-org-session org-session socket))
            (session-alive (ob-tmux--session-alive-p ob-session))
 	   (window-alive (ob-tmux--window-alive-p ob-session)))
@@ -132,31 +134,39 @@ If no window is specified, use first window."
 ;; Process execution functions
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defun ob-tmux--execute (&rest args)
+(defun ob-tmux--execute (ob-session &rest args)
   "Executes a tmux command with arguments as given."
-  (apply 'start-process
-	 "ob-tmux" "*Messages*" org-babel-tmux-location args))
+  (if (ob-tmux--socket ob-session)
+      (apply 'start-process "ob-tmux" "*Messages*"
+	     org-babel-tmux-location
+	     "-S" (ob-tmux--socket ob-session)
+	     args)
+    (apply 'start-process
+	   "ob-tmux" "*Messages*" org-babel-tmux-location args)))
 
-(defun ob-tmux--execute-string (&rest args)
+(defun ob-tmux--execute-string (ob-session &rest args)
   "Executes a tmux command with arguments as given.
 Returns stdout as a string."
+  (let* ((socket (ob-tmux--socket ob-session))
+	 (args (if socket (cons "-S" (cons socket args)) args)))
   (shell-command-to-string
    (concat org-babel-tmux-location " "
-	   (s-join " " args))))
+	   (s-join " " args)))))
 
 (defun ob-tmux--start-terminal-window (ob-session terminal)
   "Starts a terminal window with tmux attached to session."
   (let* ((process-name (concat "org-babel: terminal")))
-    (if (string-equal terminal "xterm")
+    (unless (ob-tmux--socket ob-session)
+      (if (string-equal terminal "xterm")
+	  (start-process process-name "*Messages*"
+			 terminal
+			 "-T" (ob-tmux--target ob-session)
+			 "-e" org-babel-tmux-location "attach-session"
+			 "-t" (ob-tmux--target ob-session))
 	(start-process process-name "*Messages*"
-		       terminal
-		       "-T" (ob-tmux--target ob-session)
-		       "-e" org-babel-tmux-location "attach-session"
-		       "-t" (ob-tmux--target ob-session))
-      (start-process process-name "*Messages*"
-		     terminal "--"
-		     org-babel-tmux-location "attach-session"
-		     "-t" (ob-tmux--target ob-session)))))
+		       terminal "--"
+		       org-babel-tmux-location "attach-session"
+		       "-t" (ob-tmux--target ob-session))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Tmux interaction
@@ -165,7 +175,7 @@ Returns stdout as a string."
 (defun ob-tmux--create-session (ob-session)
   "Creates a tmux session if it does not yet exist."
   (unless (ob-tmux--session-alive-p ob-session)
-    (ob-tmux--execute
+    (ob-tmux--execute ob-session
      ;; TODO: set socket
      "new-session"
      "-d" ;; just create the session, don't attach.
@@ -176,7 +186,7 @@ Returns stdout as a string."
 (defun ob-tmux--create-window (ob-session)
   "Creates a tmux window in session if it does not yet exist."
   (unless (ob-tmux--window-alive-p ob-session)
-    (ob-tmux--execute
+    (ob-tmux--execute ob-session
      ;; TODO: set socket
      "new-window"
      "-c" (expand-file-name "~") ;; start in home directory
@@ -186,7 +196,7 @@ Returns stdout as a string."
 (defun ob-tmux--set-window-option (ob-session option value)
   "If window exists, set option for window."
   (when (ob-tmux--window-alive-p ob-session)
-    (ob-tmux--execute
+    (ob-tmux--execute ob-session
      ;; TODO set socket
      "set-window-option"
      "-t" (ob-tmux--target ob-session)
@@ -204,7 +214,7 @@ to find the window again later."
 (defun ob-tmux--send-keys (ob-session line)
   "If window exists, send a line of text to it."
   (when (ob-tmux--window-alive-p ob-session)
-    (ob-tmux--execute
+    (ob-tmux--execute ob-session
      ;; TODO set socket
      "send-keys"
      "-l"
@@ -223,7 +233,7 @@ to find the window again later."
 
 (defun ob-tmux--session-alive-p (ob-session)
   "Check if SESSION exists by parsing output of \"tmux ls\"."
-  (let* ((tmux-ls (ob-tmux--execute-string "ls -F '#S'"))
+  (let* ((tmux-ls (ob-tmux--execute-string ob-session "ls -F '#S'"))
 	 (tmux-session (ob-tmux--session ob-session)))
     (car
      (seq-filter (lambda (x) (string-equal tmux-session x))
@@ -235,7 +245,7 @@ to find the window again later."
 If no window is specified in org-session, returns 't."
   (let* ((window (ob-tmux--window ob-session))
 	 (target (ob-tmux--target ob-session))
-	 (output (ob-tmux--execute-string
+	 (output (ob-tmux--execute-string ob-session
 		  "list-panes"
 		  "-F 'yes_exists'"
 		  "-t" (concat "'" target "'"))))
