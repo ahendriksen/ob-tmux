@@ -98,6 +98,11 @@ must be created."
 
 ;; helper functions
 
+(defun org-babel-tmux-execute (&rest args)
+  "Executes a tmux command with arguments as given."
+  (apply 'start-process
+	 "ob-tmux" "*Messages*" org-babel-tmux-location args))
+
 (defun org-babel-tmux-start-terminal-window (session terminal)
   "Starts a terminal window with tmux attached to session."
   (let* ((process-name (concat "org-babel: terminal (" session ")")))
@@ -115,34 +120,30 @@ must be created."
 (defun org-babel-tmux-create-session (session)
   "Creates a tmux session if it does not yet exist."
   (unless (org-babel-tmux-session-alive-p session)
-    (start-process "tmux-create-session" "*Messages*"
-		   org-babel-tmux-location "new-session"
-		   "-d" ;; just create the session, don't attach.
-		   "-c" (expand-file-name "~") ;; start in home directory
-		   "-s" (org-babel-tmux-session session)
-		   "-n" (org-babel-tmux-window-default session))))
+    (org-babel-tmux-execute
+     "new-session"
+     "-d" ;; just create the session, don't attach.
+     "-c" (expand-file-name "~") ;; start in home directory
+     "-s" (org-babel-tmux-session session)
+     "-n" (org-babel-tmux-window-default session))))
 
 (defun org-babel-tmux-create-window (session)
   "Creates a tmux window in session if it does not yet exist."
   (unless (org-babel-tmux-window-alive-p session)
-    (start-process "tmux-create-window" "*Messages*"
-		   org-babel-tmux-location "new-window"
-		   "-c" (expand-file-name "~") ;; start in home directory
-		   "-n" (org-babel-tmux-window-default session)
-		   "-t" (org-babel-tmux-session session))))
+    (org-babel-tmux-execute
+     "new-window"
+     "-c" (expand-file-name "~") ;; start in home directory
+     "-n" (org-babel-tmux-window-default session)
+     "-t" (org-babel-tmux-session session))))
 
 (defun org-babel-tmux-set-window-option (session option value)
   "If SESSION exists, set option for window."
   (let ((alive (org-babel-tmux-session-alive-p session)))
     (when alive
-      (start-process "tmux-window-options"
-	       "*Messages*"
-	       "tmux"
-	       "set-window-option"
-	       "-t"
-	       (org-babel-tmux-target-session session)
-	       option
-	       value))))
+      (org-babel-tmux-execute
+       "set-window-option"
+       "-t" (org-babel-tmux-target-session session)
+       option value))))
 
 (defun org-babel-tmux-disable-renaming (session)
   "Disable renaming features for tmux window.
@@ -157,15 +158,11 @@ to find the window again later."
   "If SESSION exists, send a line of text to it."
   (let ((alive (org-babel-tmux-session-alive-p session)))
     (when alive
-      (start-process "tmux-send-keys"
-	       "*Messages*"
-	       "tmux"
-	       "send-keys"
-	       "-l"
-	       "-t"
-	       (org-babel-tmux-target-session session)
-	       line
-	       "\n"))))
+      (org-babel-tmux-execute
+       "send-keys"
+       "-l"
+       "-t" (org-babel-tmux-target-session session)
+       line "\n"))))
 
 (defun org-babel-tmux-session-execute-string (session body)
   "If SESSION exists, send BODY to it."
@@ -207,7 +204,8 @@ If no window is specified, use first window."
 
 (defun org-babel-tmux-session-alive-p (org-session)
   "Check if SESSION exists by parsing output of \"tmux ls\"."
-  (let* ((tmux-ls (shell-command-to-string "tmux ls -F '#S'"))
+  (let* ((tmux-ls (shell-command-to-string
+		   (concat org-babel-tmux-location " ls -F '#S'"))
 	 (tmux-session (org-babel-tmux-session org-session)))
     (car
      (seq-filter (lambda (x) (string-equal tmux-session x))
@@ -220,8 +218,9 @@ If no window is specified in org-session, returns 't."
   (let* ((tmux-window (org-babel-tmux-window org-session))
 	 (tmux-target (org-babel-tmux-target-session org-session))
 	 (tmux-lws (shell-command-to-string
-		   (concat "tmux list-panes -F 'yes_exists' -t '"
-			   tmux-target "'"))))
+		    (concat org-babel-tmux-location
+			    " list-panes -F 'yes_exists' -t '"
+			    tmux-target "'"))))
     (if tmux-window
 	(progn
 	  (string-equal "yes_exists\n" tmux-lws))
