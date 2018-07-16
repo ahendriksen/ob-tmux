@@ -88,10 +88,7 @@ must be created."
     (unless session-alive (org-babel-tmux-create-session session))
     (unless window-alive (org-babel-tmux-create-window session))
     (unless session-alive
-      (start-process process-name "*Messages*"
-		     terminal "--"
-		     org-babel-tmux-location "attach-session"
-		     "-t" (org-babel-tmux-target-session session)))
+      (org-babel-tmux-start-terminal-window session terminal))
     ;; XXX: Is there a better way than the following?
     ;; wait until tmux session is available before returning
     (while (not (org-babel-tmux-session-alive-p session)))))
