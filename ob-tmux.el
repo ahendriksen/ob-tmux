@@ -45,6 +45,10 @@ In case you want to use a different tmux than one selected by your $PATH")
 (defvar org-babel-tmux-session-prefix "org-babel-session-"
   "The string that will be prefixed to tmux sessions started by ob-tmux")
 
+(defvar org-babel-tmux-default-window-name "ob1"
+  "The default tmux window name used for windows that are not
+explicitly named in an org session.")
+
 (defvar org-babel-default-header-args:tmux
   '((:results . "silent")
     (:session . "default")
@@ -189,7 +193,7 @@ Can return nil if no window specified."
   "Extracts the tmux window from the org session string.
 Returns '1' if no window specified."
   (let* ((tmux-window (cadr (split-string org-session ":"))))
-    (if tmux-window tmux-window "1")))
+    (if tmux-window tmux-window org-babel-tmux-default-window-name)))
 
 (defun org-babel-tmux-target-session (org-session)
   "Constructs a tmux target from the org session string.
