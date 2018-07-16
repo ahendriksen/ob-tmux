@@ -200,10 +200,11 @@ If no window is specified, use first window."
 	 (target-window (if window (concat "=" window) "^")))
     (concat target-session ":" target-window)))
 
-(defun org-babel-tmux-session-alive-p (session)
+
+(defun org-babel-tmux-session-alive-p (org-session)
   "Check if SESSION exists by parsing output of \"tmux ls\"."
   (let* ((tmux-ls (shell-command-to-string "tmux ls -F '#S'"))
-	 (tmux-session (org-babel-tmux-session session)))
+	 (tmux-session (org-babel-tmux-session org-session)))
     (car
      (seq-filter (lambda (x) (string-equal tmux-session x))
 		 (split-string tmux-ls "\n")))))
