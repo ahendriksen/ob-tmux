@@ -7,7 +7,8 @@
 ;; Keywords: literate programming, interactive shell, tmux
 ;; URL: https://github.com/ahendriksen/ob-tmux
 ;; Version: 0.1.1
-;; Package-Requires: ((emacs "25.1") (seq "2.3"))
+;; Package-version: 0.1.1
+;; Package-Requires: ((emacs "25.1") (seq "2.3") (s "1.9.0"))
 
 ;; This file is NOT part of GNU Emacs.
 
@@ -31,16 +32,16 @@
 ;; Heavily inspired by 'eev' from Eduardo Ochs and ob-screen.el from
 ;; Benjamin Andresen.
 ;;
-;; Adding :terminal as header arguments
-;; :terminal must support the -T (title) and -e (command) parameter
-;;           or allow for the command to be added after '--'
+;; See documentation on https://github.com/ahendriksen/ob-tmux
 ;;
-;; You can test the default setup. (gnome-terminal) with
+;; You can test the default setup with
 ;; M-x org-babel-tmux-test RET
 
 ;;; Code:
+
 (require 'ob)
 (require 'seq)
+(require 's)
 
 (defvar org-babel-tmux-location "tmux"
   "The command location for tmux.
@@ -103,7 +104,7 @@ explicitly named in an org session.")
   socket)
 
 (defun ob-tmux--from-org-session (org-session &optional socket)
-  "Creates a new ob-tmux-session object from org-session specification."
+  "Create a new ob-tmux-session object from org-session specification."
   (defun -tmux-session (org-session)
     (let* ((session (car (split-string org-session ":"))))
       (concat org-babel-tmux-session-prefix
@@ -158,7 +159,7 @@ Returns stdout as a string."
 	   (s-join " " args)))))
 
 (defun ob-tmux--start-terminal-window (ob-session terminal)
-  "Starts a terminal window with tmux attached to session."
+  "Start a terminal window with tmux attached to session."
   (let* ((process-name (concat "org-babel: terminal")))
     (unless (ob-tmux--socket ob-session)
       (if (string-equal terminal "xterm")
@@ -177,7 +178,7 @@ Returns stdout as a string."
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defun ob-tmux--create-session (ob-session)
-  "Creates a tmux session if it does not yet exist."
+  "Create a tmux session if it does not yet exist."
   (unless (ob-tmux--session-alive-p ob-session)
     (ob-tmux--execute ob-session
      ;; TODO: set socket
@@ -188,7 +189,7 @@ Returns stdout as a string."
      "-n" (ob-tmux--window-default ob-session))))
 
 (defun ob-tmux--create-window (ob-session)
-  "Creates a tmux window in session if it does not yet exist."
+  "Create a tmux window in session if it does not yet exist."
   (unless (ob-tmux--window-alive-p ob-session)
     (ob-tmux--execute ob-session
      ;; TODO: set socket
@@ -269,7 +270,7 @@ If no window is specified in org-session, returns 't."
     (buffer-substring (point-min) (point-max))))
 
 (defun ob-tmux--test ()
-  "Test if the default setup works. The terminal should shortly flicker."
+  "Test if the default setup works.  The terminal should shortly flicker."
   (interactive)
   (let* ((random-string (format "%s" (random 99999)))
          (tmpfile (org-babel-temp-file "ob-tmux-test-"))
