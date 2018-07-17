@@ -6,8 +6,8 @@
 ;; Author: Allard Hendriksen
 ;; Keywords: literate programming, interactive shell, tmux
 ;; URL: https://github.com/ahendriksen/ob-tmux
-;; Version: 0.1.1
-;; Package-version: 0.1.1
+;; Version: 0.1.2
+;; Package-version: 0.1.2
 ;; Package-Requires: ((emacs "25.1") (seq "2.3") (s "1.9.0"))
 
 ;; This file is NOT part of GNU Emacs.
@@ -110,10 +110,10 @@ Optional argument SOCKET: the location of the tmux socket (only use if non-stand
   (defun -tmux-session (org-session)
     (let* ((session (car (split-string org-session ":"))))
       (concat org-babel-tmux-session-prefix
-	      (if (string-empty-p session) "default" session))))
+	      (if (string-equal "" session) "default" session))))
   (defun -tmux-window (org-session)
     (let* ((window (cadr (split-string org-session ":"))))
-      (if (string-empty-p window) nil window)))
+      (if (string-equal "" window) nil window)))
 
   (ob-tmux--create
    :session (-tmux-session org-session)
