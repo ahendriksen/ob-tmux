@@ -18,7 +18,8 @@ In your ~.emacs~ or ~.emacs.d/init.el~ file, add the following:
     '((:results . "silent")		;
       (:session . "default")	; The default tmux session to send code to
       (:socket  . nil)              ; The default tmux socket to communicate with
-      ;; You can use xterm or gnome terminal
+      ;; You can use "xterm" and "gnome-terminal".
+      ;; On mac, you can use "iterm" as well.
       (:terminal . "gnome-terminal")))
 
   ;; The tmux sessions are prefixed with the following string.
@@ -65,7 +66,7 @@ the background. You can reattach to your tmux session at any time and
 check that the commands have indeed been executed.
 
 *Tip*. Ob-tmux is also very useful for restarting your tmux sessions
-after a reboot. Take a Look at the following snippet.
+after a reboot. Take a look at the following snippet.
 : ** Startup tmux
 : Use ~C-c C-v s~ to execute subtree.
 : *** Jupyter
