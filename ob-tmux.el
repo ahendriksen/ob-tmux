@@ -107,17 +107,17 @@ Argument PARAMS the org parameters of the code block."
 (defun ob-tmux--from-org-session (org-session &optional socket)
   "Create a new ob-tmux-session object from ORG-SESSION specification.
 Optional argument SOCKET: the location of the tmux socket (only use if non-standard)."
-  (defun -tmux-session (org-session)
+  (defun ob-tmux--tmux-session (org-session)
     (let* ((session (car (split-string org-session ":"))))
       (concat org-babel-tmux-session-prefix
 	      (if (string-equal "" session) "default" session))))
-  (defun -tmux-window (org-session)
+  (defun ob-tmux--tmux-window (org-session)
     (let* ((window (cadr (split-string org-session ":"))))
       (if (string-equal "" window) nil window)))
 
   (ob-tmux--create
-   :session (-tmux-session org-session)
-   :window (-tmux-window org-session)
+   :session (ob-tmux--tmux-session org-session)
+   :window (ob-tmux--tmux-window org-session)
    :socket socket))
 
 (defun ob-tmux--window-default (ob-session)
