@@ -3,9 +3,11 @@
 ;; Copyright (C) 2009-2017 Free Software Foundation, Inc.
 ;; Copyright (C) 2017 Allard Hendriksen
 
-;; Author: Benjamin Andresen
-;; Keywords: literate programming, interactive shell
-;; Homepage: http://orgmode.org
+;; Author: Allard Hendriksen
+;; Keywords: literate programming, interactive shell, tmux
+;; URL: https://github.com/ahendriksen/ob-tmux
+;; Version: 0.1.1
+;; Package-Requires: ((emacs "25.1") (seq "2.3"))
 
 ;; This file is NOT part of GNU Emacs.
 
@@ -24,8 +26,10 @@
 
 ;;; Commentary:
 
-;; Org-Babel support for interactive terminals.  Mostly shell scripts.
-;; Heavily inspired by 'eev' from Eduardo Ochs
+;; Org-Babel support for tmux.
+;;
+;; Heavily inspired by 'eev' from Eduardo Ochs and ob-screen.el from
+;; Benjamin Andresen.
 ;;
 ;; Adding :terminal as header arguments
 ;; :terminal must support the -T (title) and -e (command) parameter
