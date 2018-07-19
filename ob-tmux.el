@@ -43,15 +43,22 @@
 (require 'seq)
 (require 's)
 
-(defvar org-babel-tmux-location "tmux"
+
+(defcustom org-babel-tmux-location "tmux"
   "The command location for tmux.
-In case you want to use a different tmux than one selected by your $PATH")
+Change in case you want to use a different tmux than the one in your $PATH."
+  :group 'org-babel
+  :type 'string)
 
-(defvar org-babel-tmux-session-prefix "org-babel-session-"
-  "The string that will be prefixed to tmux sessions started by ob-tmux.")
+(defcustom org-babel-tmux-session-prefix "org-babel-session-"
+  "The string that will be prefixed to tmux session names started by ob-tmux."
+  :group 'org-babel
+  :type 'string)
 
-(defvar org-babel-tmux-default-window-name "ob1"
-  "This is the default tmux window name used for windows that are not explicitly named in an org session.")
+(defcustom org-babel-tmux-default-window-name "ob1"
+  "This is the default tmux window name used for windows that are not explicitly named in an org session."
+  :group 'org-babel
+  :type 'string)
 
 (defvar org-babel-default-header-args:tmux
   '((:results . "silent")
