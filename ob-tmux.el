@@ -6,8 +6,8 @@
 ;; Author: Allard Hendriksen
 ;; Keywords: literate programming, interactive shell, tmux
 ;; URL: https://github.com/ahendriksen/ob-tmux
-;; Version: 0.1.2
-;; Package-version: 0.1.2
+;; Version: 0.1.5
+;; Package-version: 0.1.5
 ;; Package-Requires: ((emacs "25.1") (seq "2.3") (s "1.9.0"))
 
 ;; This file is NOT part of GNU Emacs.
