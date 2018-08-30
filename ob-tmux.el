@@ -208,7 +208,6 @@ Argument OB-SESSION: the current ob-tmux session."
 Argument OB-SESSION: the current ob-tmux session."
   (unless (ob-tmux--session-alive-p ob-session)
     (ob-tmux--execute ob-session
-     ;; TODO: set socket
      "new-session"
      "-d" ;; just create the session, don't attach.
      "-c" (expand-file-name "~") ;; start in home directory
@@ -221,7 +220,6 @@ Argument OB-SESSION: the current ob-tmux session."
 Argument OB-SESSION: the current ob-tmux session."
   (unless (ob-tmux--window-alive-p ob-session)
     (ob-tmux--execute ob-session
-     ;; TODO: set socket
      "new-window"
      "-c" (expand-file-name "~") ;; start in home directory
      "-n" (ob-tmux--window-default ob-session)
@@ -233,7 +231,6 @@ Argument OB-SESSION: the current ob-tmux session."
 Argument OB-SESSION: the current ob-tmux session."
   (when (ob-tmux--window-alive-p ob-session)
     (ob-tmux--execute ob-session
-     ;; TODO set socket
      "set-window-option"
      "-t" (ob-tmux--target ob-session)
      option value)))
@@ -255,7 +252,6 @@ Argument OB-SESSION: the current ob-tmux session."
 Argument OB-SESSION: the current ob-tmux session."
   (when (ob-tmux--window-alive-p ob-session)
     (ob-tmux--execute ob-session
-     ;; TODO set socket
      "send-keys"
      "-l"
      "-t" (ob-tmux--target ob-session)
