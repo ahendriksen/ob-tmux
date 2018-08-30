@@ -8,8 +8,17 @@ functionality can be used to document software installation, build
 instructions, and administrative tasks. The documentation can be
 tested and adjusted while it is written.
 * Installation
-Unfortunately, ob-tmux has not yet been added to melpa. You will need
-to copy the ~ob-tmux.el~ file to a directory in your ~load-path~.
+
+This package is available on from [[https://melpa.org/#/ob-tmux][MELPA]].
+
+If you have added MELPA to your package sources, you can install
+ob-tmux interactively
+#+BEGIN_EXAMPLE
+M-x package-install [RET] ob-tmux [RET]
+#+END_EXAMPLE
+
+Alternatively, you can copy the ~ob-tmux.el~ file to a directory in
+your ~load-path~.
 ** Configuration
 In your ~.emacs~ or ~.emacs.d/init.el~ file, add the following:
 #+BEGIN_SRC elisp
@@ -29,8 +38,27 @@ In your ~.emacs~ or ~.emacs.d/init.el~ file, add the following:
   ;; Finally, if your tmux is not in your $PATH for whatever reason, you
   ;; may set the path to the tmux binary as follows:
   (setq org-babel-tmux-location "/usr/bin/tmux")
+#+END_SRC
 
-
+If you use =use-package=, you can also write
+#+BEGIN_SRC elisp
+  (use-package ob-tmux
+    ;; Install package automatically (optional)
+    :ensure t
+    :custom
+    (org-babel-default-header-args:tmux
+     '((:results . "silent")	 ;
+       (:session . "default")	 ; The default tmux session to send code to
+       (:socket  . nil)            ; The default tmux socket to communicate with
+       ;; You can use "xterm" and "gnome-terminal".
+       ;; On mac, you can use "iterm" as well.
+       (:terminal . "gnome-terminal")))
+    ;; The tmux sessions are prefixed with the following string.
+    ;; You can customize this if you like.
+    (org-babel-tmux-session-prefix "ob-")
+    ;; Finally, if your tmux is not in your $PATH for whatever reason, you
+    ;; may set the path to the tmux binary as follows:
+    (org-babel-tmux-location "/usr/bin/tmux"))
 #+END_SRC
 * Usage
 You can start a new terminal window with a tmux session as follows:
