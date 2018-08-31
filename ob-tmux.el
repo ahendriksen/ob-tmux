@@ -255,7 +255,24 @@ Argument OB-SESSION: the current ob-tmux session."
      "send-keys"
      "-l"
      "-t" (ob-tmux--target ob-session)
-     line "\n")))
+     ;; Replace semicolon at end of line with `\;'.
+
+     ;; Tmux assumes a semicolon at the end of a command-line argument
+     ;; means that a new command is started. See tmux man page around
+     ;; "Multiple commands may ... a command sequence." This allows,
+     ;; for example, the following two commands to be executed in one
+     ;; line:
+     ;;
+     ;;     tmux new-window; split-window -d
+     ;;
+     ;; To prevent tmux from interpreting a trailing semicolon as a
+     ;; command separator, we replace the semicolon with `\;'.
+     ;;
+     ;; Note: we are already using the `-l' (literal) flag. This does
+     ;; not prevent tmux from interpreting a trailing semicolon as a
+     ;; command separator.
+     (replace-regexp-in-string ";$" "\\\\;" line)
+     "\n")))
 
 (defun ob-tmux--send-body (ob-session body)
   "If tmux window (passed in OB-SESSION) exists, send BODY to it.
