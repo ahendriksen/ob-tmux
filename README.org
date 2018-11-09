@@ -7,6 +7,18 @@ terminal, especially when some interactivity is required. The
 functionality can be used to document software installation, build
 instructions, and administrative tasks. The documentation can be
 tested and adjusted while it is written.
+
+#+BEGIN_SRC tmux
+echo "hello "
+#+END_SRC
+
+#+BEGIN_SRC sh
+echo "hello"
+#+END_SRC
+
+#+BEGIN_SRC bash
+echo "hello"
+#+END_SRC
 * Installation
 Unfortunately, ob-tmux has not yet been added to melpa. You will need
 to copy the ~ob-tmux.el~ file to a directory in your ~load-path~.
