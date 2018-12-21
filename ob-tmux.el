@@ -60,6 +60,11 @@ Change in case you want to use a different tmux than the one in your $PATH."
   :group 'org-babel
   :type 'string)
 
+(defcustom org-babel-tmux-terminal-opts '("--")
+  "The list of options that will be passed to the terminal."
+  :group 'org-babel
+  :type 'list)
+
 (defvar org-babel-default-header-args:tmux
   '((:results . "silent")
     (:session . "default")
@@ -193,10 +198,10 @@ Argument OB-SESSION: the current ob-tmux session."
 			 "-T" (ob-tmux--target ob-session)
 			 "-e" org-babel-tmux-location "attach-session"
 			 "-t" (ob-tmux--target ob-session))
-	(start-process process-name "*Messages*"
-		       terminal "--"
-		       org-babel-tmux-location "attach-session"
-		       "-t" (ob-tmux--target ob-session))))))
+	  (apply 'start-process (append (list process-name "*Messages*" terminal)
+									org-babel-tmux-terminal-opts
+									(list org-babel-tmux-location "attach-session"
+										  "-t" (ob-tmux--target ob-session))))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Tmux interaction
