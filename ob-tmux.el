@@ -60,6 +60,11 @@ Change in case you want to use a different tmux than the one in your $PATH."
   :group 'org-babel
   :type 'string)
 
+(defcustom org-babel-tmux-terminal "gnome-terminal"
+  "This is the terminal that will be spawned."
+  :group 'org-babel
+  :type 'string)
+
 (defcustom org-babel-tmux-terminal-opts '("--")
   "The list of options that will be passed to the terminal."
   :group 'org-babel
@@ -68,8 +73,7 @@ Change in case you want to use a different tmux than the one in your $PATH."
 (defvar org-babel-default-header-args:tmux
   '((:results . "silent")
     (:session . "default")
-    (:socket . nil)
-    (:terminal . "gnome-terminal"))
+    (:socket . nil))
   "Default arguments to use when running tmux source blocks.")
 
 (add-to-list 'org-src-lang-modes '("tmux" . sh))
@@ -87,7 +91,7 @@ Argument PARAMS the org parameters of the code block."
   (message "Sending source code block to interactive terminal session...")
   (save-window-excursion
     (let* ((org-session (cdr (assq :session params)))
-	   (terminal (cdr (assq :terminal params)))
+	   (terminal org-babel-tmux-terminal)
 	   (socket (cdr (assq :socket params)))
 	   (socket (when socket (expand-file-name socket)))
 	   (ob-session (ob-tmux--from-org-session org-session socket))
@@ -189,19 +193,17 @@ automatically space separated."
 (defun ob-tmux--start-terminal-window (ob-session terminal)
   "Start a TERMINAL window with tmux attached to session.
 
-Argument OB-SESSION: the current ob-tmux session."
-  (let ((process-name "org-babel: terminal")
-    (unless (ob-tmux--socket ob-session)
-      (if (string-equal terminal "xterm")
-	  (start-process process-name "*Messages*"
-			 terminal
-			 "-T" (ob-tmux--target ob-session)
-			 "-e" org-babel-tmux-location "attach-session"
-			 "-t" (ob-tmux--target ob-session))
-	  (apply 'start-process (append (list process-name "*Messages*" terminal)
+  Argument OB-SESSION: the current ob-tmux session."
+  (let ((start-process-mandatory-args `("org-babel: terminal"
+										"*Messages*"
+										,terminal))
+		(tmux-cmd `(,org-babel-tmux-location
+					 "attach-session"
+					 "-t" ,(ob-tmux--target ob-session))))
+	(unless (ob-tmux--socket ob-session)
+	  (apply 'start-process (append start-process-mandatory-args
 									org-babel-tmux-terminal-opts
-									(list org-babel-tmux-location "attach-session"
-										  "-t" (ob-tmux--target ob-session))))))))
+									tmux-cmd)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Tmux interaction
