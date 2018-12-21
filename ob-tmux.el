@@ -190,7 +190,7 @@ automatically space separated."
   "Start a TERMINAL window with tmux attached to session.
 
 Argument OB-SESSION: the current ob-tmux session."
-  (let* ((process-name (concat "org-babel: terminal")))
+  (let ((process-name "org-babel: terminal")
     (unless (ob-tmux--socket ob-session)
       (if (string-equal terminal "xterm")
 	  (start-process process-name "*Messages*"
