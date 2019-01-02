@@ -26,7 +26,7 @@ In your ~.emacs~ or ~.emacs.d/init.el~ file, add the following:
   (setq org-babel-default-header-args:tmux
     '((:results . "silent")		;
       (:session . "default")	; The default tmux session to send code to
-      (:socket  . nil)              ; The default tmux socket to communicate with
+      (:socket  . nil)))        ; The default tmux socket to communicate with
       ;; You can use "xterm" and "gnome-terminal".
       ;; On mac, you can use "iterm" as well.
       (:terminal . "gnome-terminal")))
@@ -34,6 +34,11 @@ In your ~.emacs~ or ~.emacs.d/init.el~ file, add the following:
   ;; The tmux sessions are prefixed with the following string.
   ;; You can customize this if you like.
   (setq org-babel-tmux-session-prefix "ob-")
+
+  ;; The terminal that will be used.
+  ;; You can also customize the options passed to the terminal.
+  (setq org-babel-tmux-terminal "xterm")
+  (setq org-babel-tmux-terminal-opts '("-T" "ob-tmux" "-e"))
 
   ;; Finally, if your tmux is not in your $PATH for whatever reason, you
   ;; may set the path to the tmux binary as follows:
@@ -49,13 +54,14 @@ If you use =use-package=, you can also write
     (org-babel-default-header-args:tmux
      '((:results . "silent")	 ;
        (:session . "default")	 ; The default tmux session to send code to
-       (:socket  . nil)            ; The default tmux socket to communicate with
-       ;; You can use "xterm" and "gnome-terminal".
-       ;; On mac, you can use "iterm" as well.
-       (:terminal . "gnome-terminal")))
+       (:socket  . nil)))        ; The default tmux socket to communicate with
     ;; The tmux sessions are prefixed with the following string.
     ;; You can customize this if you like.
     (org-babel-tmux-session-prefix "ob-")
+    ;; The terminal that will be used.
+    ;; You can also customize the options passed to the terminal.
+    (setq org-babel-tmux-terminal "xterm")
+    (setq org-babel-tmux-terminal-opts '("-T" "ob-tmux" "-e"))
     ;; Finally, if your tmux is not in your $PATH for whatever reason, you
     ;; may set the path to the tmux binary as follows:
     (org-babel-tmux-location "/usr/bin/tmux"))
@@ -163,10 +169,6 @@ it is already logged in remotely.
 * Known bugs and or possible issues
 My tmux indexes start at 1. By default, tmux window indexes start at
 zero. This might lead to problems. I have not yet checked.
-
-Terminals other than xterm and gnome-terminal have not been
-tested. If you have positive or negative experiences with any other
-terminal, let me know.
 
 I will try to respond within a week to any issues raised. I cannot
 promise I will fix them.
