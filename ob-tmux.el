@@ -258,33 +258,23 @@ Argument OB-SESSION: the current ob-tmux session."
     (ob-tmux--set-window-option ob-session "allow-rename" "off")
     (ob-tmux--set-window-option ob-session "automatic-rename" "off")))
 
+
+(defun ob-tmux--format-keys (string)
+  "Format STRING as a sequence of hexadecimal numbers, to be sent via the `send-keys' command."
+  (mapcar (lambda (c) (format "0x%x" c))
+	string))
+
 (defun ob-tmux--send-keys (ob-session line)
   "If tmux window exists, send a LINE of text to it.
 
 Argument OB-SESSION: the current ob-tmux session."
   (when (ob-tmux--window-alive-p ob-session)
-    (ob-tmux--execute ob-session
-     "send-keys"
-     "-l"
-     "-t" (ob-tmux--target ob-session)
-     ;; Replace semicolon at end of line with `\;'.
-
-     ;; Tmux assumes a semicolon at the end of a command-line argument
-     ;; means that a new command is started. See tmux man page around
-     ;; "Multiple commands may ... a command sequence." This allows,
-     ;; for example, the following two commands to be executed in one
-     ;; line:
-     ;;
-     ;;     tmux new-window; split-window -d
-     ;;
-     ;; To prevent tmux from interpreting a trailing semicolon as a
-     ;; command separator, we replace the semicolon with `\;'.
-     ;;
-     ;; Note: we are already using the `-l' (literal) flag. This does
-     ;; not prevent tmux from interpreting a trailing semicolon as a
-     ;; command separator.
-     (replace-regexp-in-string ";$" "\\\\;" line)
-     "\n")))
+    (let* ((hex-line (ob-tmux-format-keys line)))
+      (apply 'ob-tmux--execute
+	     ob-session
+	     "send-keys"
+	     "-t" (ob-tmux--target ob-session)
+	     hex-line))))
 
 (defun ob-tmux--send-body (ob-session body)
   "If tmux window (passed in OB-SESSION) exists, send BODY to it.
@@ -292,7 +282,9 @@ Argument OB-SESSION: the current ob-tmux session."
 Argument OB-SESSION: the current ob-tmux session."
   (let ((lines (split-string body "[\n\r]+")))
     (when (ob-tmux--window-alive-p ob-session)
-      (mapc (lambda (l) (ob-tmux--send-keys ob-session l)) lines))))
+      (mapc (lambda (l)
+	      (ob-tmux--send-keys ob-session (concat l "\n")))
+	    lines))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Tmux interrogation
