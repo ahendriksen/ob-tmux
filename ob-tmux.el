@@ -91,7 +91,8 @@ Argument PARAMS the org parameters of the code block."
   (message "Sending source code block to interactive terminal session...")
   (save-window-excursion
     (let* ((org-session (cdr (assq :session params)))
-	   (terminal org-babel-tmux-terminal)
+	   (org-header-terminal (cdr (assq :terminal params)))
+	   (terminal (or org-header-terminal org-babel-tmux-terminal))
 	   (socket (cdr (assq :socket params)))
 	   (socket (when socket (expand-file-name socket)))
 	   (ob-session (ob-tmux--from-org-session org-session socket))
@@ -108,8 +109,12 @@ Argument PARAMS the org parameters of the code block."
       ;; Disable window renaming from within tmux
       (ob-tmux--disable-renaming ob-session)
       (ob-tmux--send-body
-       ob-session (org-babel-expand-body:generic body params)))))
-
+       ob-session (org-babel-expand-body:generic body params))
+      ;; Warn that setting the terminal from the org source block
+      ;; header arguments is going to be deprecated.
+      (message "ob-tmux terminal: %s" org-header-terminal)
+      (when org-header-terminal
+	(ob-tmux--deprecation-warning org-header-terminal)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; ob-tmux object
@@ -195,15 +200,15 @@ automatically space separated."
 
   Argument OB-SESSION: the current ob-tmux session."
   (let ((start-process-mandatory-args `("org-babel: terminal"
-										"*Messages*"
-										,terminal))
-		(tmux-cmd `(,org-babel-tmux-location
-					 "attach-session"
-					 "-t" ,(ob-tmux--target ob-session))))
-	(unless (ob-tmux--socket ob-session)
-	  (apply 'start-process (append start-process-mandatory-args
-									org-babel-tmux-terminal-opts
-									tmux-cmd)))))
+					"*Messages*"
+					,terminal))
+	(tmux-cmd `(,org-babel-tmux-location
+		    "attach-session"
+		    "-t" ,(ob-tmux--target ob-session))))
+    (unless (ob-tmux--socket ob-session)
+      (apply 'start-process (append start-process-mandatory-args
+				    org-babel-tmux-terminal-opts
+				    tmux-cmd)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Tmux interaction
@@ -318,6 +323,42 @@ If no window is specified in OB-SESSION, returns 't."
 	  ((null window)
 	   't))))
 
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Warnings
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(defun ob-tmux--deprecation-warning (org-header-terminal)
+  (let* ((message (format "DEPRECATION WARNING: Setting `:terminal` using org source block header arguments is deprecated.
+
+Consider changing your ob-tmux configuration as follows:
+
+(setq org-babel-default-header-args:tmux
+      '((:results . \"\")
+        (:session . \"\")
+        (:terminal. \"%s\")         ; <--- REMOVE THIS LINE
+        (:socket  . nil)))
+
+;; You can now customize the terminal and its options as follows:
+(setq org-babel-tmux-terminal \"%s\")
+(setq org-babel-tmux-terminal-opts '(\"-T\" \"ob-tmux\" \"-e\"))
+; The default terminal is \"gnome-terminal\" with options \"--\".
+
+If you have any source blocks containing `:terminal`, please consider removing them:
+
+    #+begin_src tmux :session test :terminal %s
+    echo hello
+    #+end_src
+
+Becomes:
+
+    #+begin_src tmux :session test
+    echo hello
+    #+end_src
+
+End of warning. (See *Warnings* buffer for full message)
+" org-header-terminal org-header-terminal org-header-terminal)))
+    (display-warning 'deprecation-warning message :warning)
+    message))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Test functions
