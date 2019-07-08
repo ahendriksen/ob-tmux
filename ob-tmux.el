@@ -269,7 +269,7 @@ Argument OB-SESSION: the current ob-tmux session."
 
 Argument OB-SESSION: the current ob-tmux session."
   (when (ob-tmux--window-alive-p ob-session)
-    (let* ((hex-line (ob-tmux-format-keys line)))
+    (let* ((hex-line (ob-tmux--format-keys line)))
       (apply 'ob-tmux--execute
 	     ob-session
 	     "send-keys"
