@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Deprecated
 - Possibility to configure terminal using org-babel header arguments.
 ### Added
+- Add possibility to define variables (Thanks to KaiHa!)
 - Add installation instructions for MELPA.
 - Add possibility to configure terminal and add options to the
   terminal. (Thanks to dkrm0!)

@@ -92,6 +92,12 @@ following example, the ~:session~ argument has been changed to
 Executing this code block will add a window, ~new-window~, to your
 session.
 
+You can parameterize scripts by using ~:var variable="value"~. This will add a
+line containing =variable="value"= preceding the content body.
+: #+begin_src tmux :var name="Ismael"
+: echo hello ${name}
+: #+end_src
+
 You can exit your tmux session by detaching. The terminal window will
 close automatically. Ob-tmux will not detect that you have
 detached. Any commands you send will be sent to the tmux session in
