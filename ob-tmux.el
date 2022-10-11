@@ -227,7 +227,7 @@ Argument OB-SESSION: the current ob-tmux session."
      "-d" ;; just create the session, don't attach.
      "-c" (expand-file-name "~") ;; start in home directory
      "-s" (ob-tmux--session ob-session)
-     "-n" (ob-tmux--window-default ob-session))))
+     "-n" org-babel-tmux-default-window-name)))
 
 (defun ob-tmux--create-window (ob-session)
   "Create a tmux window in session if it does not yet exist.
