@@ -89,6 +89,7 @@ Change in case you want to use a different tmux than the one in your $PATH."
 Argument BODY the body of the tmux code block.
 Argument PARAMS the org parameters of the code block."
   (message "Sending source code block to interactive terminal session...")
+  (setq body (format "cd %s\n%s" default-directory body))
   (save-window-excursion
     (let* ((org-session (cdr (assq :session params)))
 	   (org-header-terminal (cdr (assq :terminal params)))
