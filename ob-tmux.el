@@ -174,17 +174,17 @@ Argument OB-SESSION: the current ob-tmux session."
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defun ob-tmux--execute (ob-session &rest args)
-  "Execute a tmux command with arguments as given.
+  "Execute a tmux command with the given arguments.
 
-Argument OB-SESSION: the current ob-tmux session.
+OB-SESSION: the current ob-tmux session.
 Optional command-line arguments can be passed in ARGS."
-  (if (ob-tmux--socket ob-session)
-      (apply 'start-process "ob-tmux" "*Messages*"
-	     org-babel-tmux-location
-	     "-S" (ob-tmux--socket ob-session)
-	     args)
-    (apply 'start-process
-	   "ob-tmux" "*Messages*" org-babel-tmux-location args)))
+  (let ((socket (ob-tmux--socket ob-session)))
+    (unless (zerop (apply #'call-process org-babel-tmux-location
+                          nil nil nil
+                          (if socket
+                              (append `("-S" ,socket) args)
+                            args)))
+      (error "Error executing tmux command"))))
 
 (defun ob-tmux--execute-string (ob-session &rest args)
   "Execute a tmux command with arguments as given.
@@ -203,16 +203,13 @@ automatically space separated."
   "Start a TERMINAL window with tmux attached to session.
 
   Argument OB-SESSION: the current ob-tmux session."
-  (let ((start-process-mandatory-args `("org-babel: terminal"
-					"*Messages*"
-					,terminal))
-	(tmux-cmd `(,org-babel-tmux-location
-		    "attach-session"
-		    "-t" ,(ob-tmux--target ob-session))))
+  (let ((tmux-cmd `(,org-babel-tmux-location
+		    "attach-session" "-t" ,(ob-tmux--target ob-session))))
     (unless (ob-tmux--socket ob-session)
-      (apply 'start-process (append start-process-mandatory-args
-				    org-babel-tmux-terminal-opts
-				    tmux-cmd)))))
+      (unless (zerop (apply #'call-process terminal nil nil nil
+                            (append org-babel-tmux-terminal-opts
+                                    tmux-cmd)))
+        (error "Error executing tmux command")))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Tmux interaction
