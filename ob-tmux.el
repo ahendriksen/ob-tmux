@@ -103,7 +103,14 @@ Argument PARAMS the org parameters of the code block."
            (session-alive (ob-tmux--session-alive-p ob-session))
 	   (window-alive (ob-tmux--window-alive-p ob-session)))
       ;; Create tmux session and window if they do not yet exist
-      (unless session-alive (ob-tmux--create-session ob-session))
+      (when (and session-alive
+                 (ob-tmux--default-session-p ob-session))
+        (ob-tmux--kill-session ob-session)
+        (setq session-alive nil)
+        (message "ob-tmux: killed default session %s"
+                 (ob-tmux--session ob-session)))
+      (unless session-alive
+        (ob-tmux--create-session ob-session))
       (unless window-alive (ob-tmux--create-window ob-session))
       ;; Start terminal window if the session does not yet exist
       (unless session-alive
@@ -168,6 +175,12 @@ Argument OB-SESSION: the current ob-tmux session."
 	 (target-window (if window (concat "=" window) "^")))
     (concat target-session ":" target-window)))
 
+(defun ob-tmux--default-session-p (session)
+  "Whether SESSION is a default session."
+  (let ((default-session (assoc-default :session
+                                        org-babel-default-header-args:tmux)))
+    (string-suffix-p default-session (ob-tmux--session session))))
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Process execution functions
@@ -226,6 +239,13 @@ Argument OB-SESSION: the current ob-tmux session."
      "-c" (expand-file-name "~") ;; start in home directory
      "-s" (ob-tmux--session ob-session)
      "-n" (ob-tmux--window-default ob-session))))
+
+(defun ob-tmux--kill-session (ob-session)
+  "Kill the tmux session OB-SESSION."
+  (when (ob-tmux--session-alive-p ob-session)
+    (ob-tmux--execute ob-session
+                      "kill-session"
+                      "-t" (ob-tmux--target ob-session))))
 
 (defun ob-tmux--create-window (ob-session)
   "Create a tmux window in session if it does not yet exist.
