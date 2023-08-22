@@ -76,6 +76,22 @@ Change in case you want to use a different tmux than the one in your $PATH."
     (:socket . nil))
   "Default arguments to use when running tmux source blocks.")
 
+(defcustom org-babel-tmux-newline-replace "; "
+  "newline is replaced with this character if org-babel-tmux-expand-body-function is set to org-babel-expand-body:tmux-replace-newline"
+  :group 'org-babel
+  :type 'string)
+
+(defcustom org-babel-expand-body:tmux
+  #'org-babel-expand-body:generic
+  "Function to expand body of the tmux source block"
+  :group 'org-babel
+  :type '(choice (function :tag "Generic no-op function."
+                           org-babel-expand-body:generic)
+                 (function :tag "Replace new-line with org-babel-tmux-replace."
+                           org-babel-expand-body:tmux-replace-newline))
+  )
+
+
 (add-to-list 'org-src-lang-modes '("tmux" . sh))
 
 
@@ -112,12 +128,20 @@ Argument PARAMS the org parameters of the code block."
       ;; Disable window renaming from within tmux
       (ob-tmux--disable-renaming ob-session)
       (ob-tmux--send-body
-       ob-session (org-babel-expand-body:generic body params vars))
+       ob-session (funcall org-babel-expand-body:tmux body params vars))
       ;; Warn that setting the terminal from the org source block
       ;; header arguments is going to be deprecated.
       (message "ob-tmux terminal: %s" org-header-terminal)
       (when org-header-terminal
 	(ob-tmux--deprecation-warning org-header-terminal)))))
+
+
+(defun org-babel-expand-body:tmux-replace-newline (body params &optional var-lines)
+
+  (let ((new_body (string-replace "\n" org-babel-tmux-newline-replace (string-trim body))))
+   (org-babel-expand-body:generic new_body params var-lines)
+  )
+  )
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; ob-tmux object
