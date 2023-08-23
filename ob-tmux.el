@@ -112,12 +112,56 @@ Argument PARAMS the org parameters of the code block."
       ;; Disable window renaming from within tmux
       (ob-tmux--disable-renaming ob-session)
       (ob-tmux--send-body
-       ob-session (org-babel-expand-body:generic body params vars))
+       ob-session (org-babel-expand-body:tmux body params vars))
       ;; Warn that setting the terminal from the org source block
       ;; header arguments is going to be deprecated.
       (message "ob-tmux terminal: %s" org-header-terminal)
       (when org-header-terminal
 	(ob-tmux--deprecation-warning org-header-terminal)))))
+
+
+(defun org-babel-expand-body:tmux (body params &optional var-lines)
+
+  (let* ((line-mode (cdr (assq :line-mode params)))
+         (combiner (cdr (assq :combiner params)))
+         (new-body body))
+
+    (if combiner
+        (setq combiner (concat combiner " "))
+      (setq combiner "\n")
+      )
+
+    (if line-mode
+      (let* ((context (org-element-context (org-element-at-point)))
+             (cur-line (line-number-at-pos))
+             (beg (org-element-property :begin context))
+             (beg-line (save-excursion
+                         (goto-char beg)
+                         (+ (line-number-at-pos) 1)))
+             (all-lines (split-string body "\n"))
+             (cur-idx (- cur-line beg-line))
+             (lines ())
+             )
+    (pcase line-mode
+      ("current"
+       (setq lines (list (nth cur-idx all-lines)))
+       )
+      ("below"
+       (setq lines (cl-subseq all-lines cur-idx (length all-lines)))
+       )
+      ("above"
+       (setq lines (cl-subseq all-lines 0 (+ cur-idx 1)))
+       )
+      (_
+       (setq lines all-lines)
+       )
+      )
+    (setq new-body (string-join lines combiner)))
+      (setq new-body (string-replace "\n" combiner (string-trim body))))
+    (org-babel-expand-body:generic new-body params var-lines)
+    )
+  )
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; ob-tmux object
@@ -388,7 +432,3 @@ Argument PATH: the location of the file."
 		       "DOESN'T work.")))))
 
 (provide 'ob-tmux)
-
-
-
-;;; ob-tmux.el ends here
