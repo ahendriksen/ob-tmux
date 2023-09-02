@@ -89,6 +89,7 @@ Change in case you want to use a different tmux than the one in your $PATH."
 Argument BODY the body of the tmux code block.
 Argument PARAMS the org parameters of the code block."
   (message "Sending source code block to interactive terminal session...")
+  (setq body (format "cd %s\n%s" default-directory body))
   (save-window-excursion
     (let* ((org-session (cdr (assq :session params)))
 	   (org-header-terminal (cdr (assq :terminal params)))
@@ -102,7 +103,14 @@ Argument PARAMS the org parameters of the code block."
            (session-alive (ob-tmux--session-alive-p ob-session))
 	   (window-alive (ob-tmux--window-alive-p ob-session)))
       ;; Create tmux session and window if they do not yet exist
-      (unless session-alive (ob-tmux--create-session ob-session))
+      (when (and session-alive
+                 (ob-tmux--default-session-p ob-session))
+        (ob-tmux--kill-session ob-session)
+        (setq session-alive nil)
+        (message "ob-tmux: killed default session %s"
+                 (ob-tmux--session ob-session)))
+      (unless session-alive
+        (ob-tmux--create-session ob-session))
       (unless window-alive (ob-tmux--create-window ob-session))
       ;; Start terminal window if the session does not yet exist
       (unless session-alive
@@ -167,23 +175,29 @@ Argument OB-SESSION: the current ob-tmux session."
 	 (target-window (if window (concat "=" window) "^")))
     (concat target-session ":" target-window)))
 
+(defun ob-tmux--default-session-p (session)
+  "Whether SESSION is a default session."
+  (let ((default-session (assoc-default :session
+                                        org-babel-default-header-args:tmux)))
+    (string-suffix-p default-session (ob-tmux--session session))))
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Process execution functions
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defun ob-tmux--execute (ob-session &rest args)
-  "Execute a tmux command with arguments as given.
+  "Execute a tmux command with the given arguments.
 
-Argument OB-SESSION: the current ob-tmux session.
+OB-SESSION: the current ob-tmux session.
 Optional command-line arguments can be passed in ARGS."
-  (if (ob-tmux--socket ob-session)
-      (apply 'start-process "ob-tmux" "*Messages*"
-	     org-babel-tmux-location
-	     "-S" (ob-tmux--socket ob-session)
-	     args)
-    (apply 'start-process
-	   "ob-tmux" "*Messages*" org-babel-tmux-location args)))
+  (let ((socket (ob-tmux--socket ob-session)))
+    (unless (zerop (apply #'call-process org-babel-tmux-location
+                          nil nil nil
+                          (if socket
+                              (append `("-S" ,socket) args)
+                            args)))
+      (error "Error executing tmux command"))))
 
 (defun ob-tmux--execute-string (ob-session &rest args)
   "Execute a tmux command with arguments as given.
@@ -202,16 +216,13 @@ automatically space separated."
   "Start a TERMINAL window with tmux attached to session.
 
   Argument OB-SESSION: the current ob-tmux session."
-  (let ((start-process-mandatory-args `("org-babel: terminal"
-					"*Messages*"
-					,terminal))
-	(tmux-cmd `(,org-babel-tmux-location
-		    "attach-session"
-		    "-t" ,(ob-tmux--target ob-session))))
+  (let ((tmux-cmd `(,org-babel-tmux-location
+		    "attach-session" "-t" ,(ob-tmux--target ob-session))))
     (unless (ob-tmux--socket ob-session)
-      (apply 'start-process (append start-process-mandatory-args
-				    org-babel-tmux-terminal-opts
-				    tmux-cmd)))))
+      (unless (zerop (apply #'call-process terminal nil nil nil
+                            (append org-babel-tmux-terminal-opts
+                                    tmux-cmd)))
+        (error "Error executing tmux command")))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Tmux interaction
@@ -228,6 +239,13 @@ Argument OB-SESSION: the current ob-tmux session."
      "-c" (expand-file-name "~") ;; start in home directory
      "-s" (ob-tmux--session ob-session)
      "-n" (ob-tmux--window-default ob-session))))
+
+(defun ob-tmux--kill-session (ob-session)
+  "Kill the tmux session OB-SESSION."
+  (when (ob-tmux--session-alive-p ob-session)
+    (ob-tmux--execute ob-session
+                      "kill-session"
+                      "-t" (ob-tmux--target ob-session))))
 
 (defun ob-tmux--create-window (ob-session)
   "Create a tmux window in session if it does not yet exist.
